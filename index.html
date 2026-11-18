@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sticky</title>
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body { font-family: var(--font), sans-serif; color: var(--text); }
+    input, select, button { font: inherit; color: inherit; }
+    button { cursor: pointer; }
+    .hidden { display: none !important; }
+
+    .card {
+      position: relative;
+      box-sizing: border-box;
+      height: calc(100vh - 20px);
+      margin: 10px;
+      padding: 12px 16px 26px;
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      border-radius: 24px;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 34px;
+      -webkit-app-region: drag;
+    }
+
+    .handle {
+      flex: none;
+      width: 12px;
+      height: 18px;
+      opacity: 0.35;
+      background-image: radial-gradient(currentColor 1.4px, transparent 1.6px);
+      background-size: 6px 6px;
+    }
+
+    #title {
+      flex: 1;
+      width: 0;
+      min-width: 0;
+      padding: 4px 8px;
+      border: 0;
+      outline: none;
+      border-radius: 10px;
+      background: transparent;
+      font-size: 18px;
+      font-weight: 600;
+      -webkit-app-region: no-drag;
+    }
+
+    #title:focus { background: rgba(255, 255, 255, 0.35); }
+
+    .iconbtn {
+      flex: none;
+      width: 26px;
+      height: 26px;
+      padding: 0;
+      display: grid;
+      place-items: center;
+      border: 0;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.45);
+      -webkit-app-region: no-drag;
+    }
+
+    .iconbtn:hover { background: rgba(255, 255, 255, 0.75); }
+    #pin[aria-pressed="true"] { background: var(--text); color: var(--solid); }
+
+    .settings {
+      display: grid;
+      gap: 10px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.35);
+      font-size: 12px;
+    }
+
+    .row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .themes { display: flex; gap: 7px; }
+
+    .dot, .color-circle {
+      flex: none;
+      padding: 0;
+      border: 2px solid rgba(255, 255, 255, 0.9);
+      border-radius: 50%;
+    }
+
+    .dot {
+      width: 20px;
+      height: 20px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    }
+
+    .dot.active { outline: 2px solid var(--text); outline-offset: 1px; }
+    .color-circle { width: 22px; height: 22px; }
+    #cBg { background: var(--solid); }
+    #cText { background: var(--text); }
+    #cOp { width: 110px; accent-color: var(--text); }
+
+    #cFont {
+      border: 0;
+      outline: none;
+      border-radius: 10px;
+      padding: 4px 8px;
+      background: #fff;
+      color: #3b2a40;
+      cursor: pointer;
+    }
+
+    #cFont option { background: #fff; color: #3b2a40; }
+    #cFont, #cFont option { font-family: "Segoe UI", sans-serif; }
+
+    #color-palette {
+      position: absolute;
+      z-index: 5;
+      box-sizing: border-box;
+      width: 176px;
+      padding: 10px;
+      display: grid;
+      gap: 9px;
+      border-radius: 12px;
+      background: #fff;
+      box-shadow: 0 4px 16px #0003;
+    }
+
+    #color-area {
+      position: relative;
+      height: 96px;
+      border-radius: 6px;
+      background:
+        linear-gradient(to top, #000, transparent),
+        linear-gradient(to right, #fff, transparent),
+        hsl(var(--palette-hue, 0) 100% 50%);
+      cursor: crosshair;
+      touch-action: none;
+      user-select: none;
+    }
+
+    #color-marker {
+      position: absolute;
+      width: 9px;
+      height: 9px;
+      border: 1px solid white;
+      border-radius: 50%;
+      box-shadow: 0 0 0 1px #0009;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+
+    #color-hue {
+      appearance: none;
+      width: 100%;
+      height: 10px;
+      margin: 2px 0;
+      border-radius: 6px;
+      background: linear-gradient(to right, red, yellow, lime, cyan, blue, magenta, red);
+      cursor: pointer;
+    }
+
+    #color-hue::-webkit-slider-thumb {
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      border: 1px solid #777;
+      border-radius: 50%;
+      background: #fff;
+    }
+
+    .color-circle:focus,
+    #color-area:focus,
+    #color-hue:focus { outline: none; }
+
+    .color-circle:focus-visible { box-shadow: 0 0 0 2px var(--text); }
+    #color-area:focus-visible,
+    #color-hue:focus-visible { box-shadow: 0 0 0 2px #5b2a4e; }
+
+    .tabs {
+      display: flex;
+      gap: 5px;
+      padding-bottom: 5px;
+      border-bottom: 1px solid color-mix(in srgb, currentColor 22%, transparent);
+    }
+
+    .tabs button, #add-task, .remove-task {
+      border: 0;
+      border-radius: 8px;
+      padding: 6px 10px;
+      background: transparent;
+    }
+
+    .tabs button[aria-pressed="true"], #add-task {
+      background: color-mix(in srgb, currentColor 12%, transparent);
+      font-weight: 600;
+    }
+
+    .tabs button:hover, .remove-task:hover {
+      background: color-mix(in srgb, currentColor 12%, transparent);
+    }
+
+    #checklist {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+      gap: 8px;
+    }
+
+    #task-form { display: flex; gap: 6px; }
+
+    #task-input {
+      flex: 1;
+      width: 0;
+      min-width: 0;
+      padding: 6px;
+      border: 0;
+      border-bottom: 1px solid color-mix(in srgb, currentColor 32%, transparent);
+      background: transparent;
+    }
+
+    #task-input::placeholder { color: currentColor; opacity: 0.6; }
+    #task-input:focus { outline: none; border-bottom-color: var(--text); }
+    #add-task:focus { outline: none; }
+    #add-task:focus-visible { box-shadow: inset 0 0 0 1px var(--text); }
+
+    #task-list { margin: 0; padding: 0; list-style: none; overflow: auto; }
+    .task-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
+
+    .task-row label {
+      display: flex;
+      align-items: start;
+      gap: 8px;
+      flex: 1;
+      min-width: 0;
+      cursor: pointer;
+    }
+
+    .task-row span { overflow-wrap: anywhere; }
+    .task-row input { flex: none; accent-color: var(--text); }
+    .task-row input:checked + span { text-decoration: line-through; opacity: 0.65; }
+
+    #note {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      padding: 8px 6px;
+      outline: none;
+      background: transparent;
+      font-size: 15px;
+      line-height: 1.55;
+      overflow-wrap: anywhere;
+    }
+
+    #note:empty::before {
+      content: attr(data-placeholder);
+      opacity: 0.45;
+      pointer-events: none;
+    }
+
+    #note ul { margin: 4px 0; padding-left: 22px; }
+    #note::-webkit-scrollbar { width: 6px; }
+    #note::-webkit-scrollbar-thumb {
+      background: rgba(128, 128, 128, 0.4);
+      border-radius: 3px;
+    }
+
+    #note, #task-input, #title {
+      cursor: var(--text-cursor, text);
+      caret-color: var(--text);
+    }
+
+    .toolbar {
+      display: none;
+      justify-content: space-around;
+      align-items: center;
+      padding: 4px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.4);
+    }
+
+    .editing .toolbar { display: flex; }
+
+    .fmt {
+      width: 34px;
+      height: 28px;
+      padding: 0;
+      display: grid;
+      place-items: center;
+      border: 0;
+      border-radius: 9px;
+      background: transparent;
+      font-size: 15px;
+    }
+
+    .fmt:hover { background: rgba(255, 255, 255, 0.55); }
+    .fmt.active { background: var(--text); color: var(--solid); }
+
+    #grip {
+      position: absolute;
+      right: 8px;
+      bottom: 8px;
+      width: 16px;
+      height: 16px;
+      cursor: nwse-resize;
+      border-right: 3px solid var(--text);
+      border-bottom: 3px solid var(--text);
+      border-radius: 0 0 8px 0;
+      opacity: 0.4;
+    }
+
+    #tab {
+      width: 44px;
+      height: 56px;
+      margin-top: 4px;
+      padding: 0;
+      display: grid;
+      place-items: center;
+      cursor: grab;
+      user-select: none;
+      touch-action: none;
+      background: var(--tab);
+      border: 1px solid rgba(255, 255, 255, 0.7);
+    }
+
+    #tab:active { cursor: grabbing; }
+    #tab svg { pointer-events: none; }
+    #tab.left { margin-left: 20px; border-radius: 0 18px 18px 0; }
+    #tab.right { border-radius: 18px 0 0 18px; }
+  </style>
+</head>
+<body>
+  <div id="card" class="card">
+    <div class="topbar">
+      <div class="handle" aria-hidden="true"></div>
+      <input id="title" aria-label="Title" spellcheck="false" placeholder="My Tasks" />
+
+      <button id="gear" class="iconbtn" title="Style" aria-label="Style">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"
+             stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
+          <path d="M2 4h10M2 10h10" />
+          <circle cx="5" cy="4" r="1.6" fill="currentColor" />
+          <circle cx="9" cy="10" r="1.6" fill="currentColor" />
+        </svg>
+      </button>
+
+      <button id="pin" class="iconbtn" title="Keep on top"
+              aria-label="Keep on top" aria-pressed="false">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"
+             stroke="currentColor" stroke-width="1.4"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M5 2h6M6 2v4l-2 3v1h8V9l-2-3V2M8 10v4" />
+        </svg>
+      </button>
+
+      <button id="min" class="iconbtn" title="Tuck away" aria-label="Tuck away">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"
+             stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
+          <path d="M3 7h8" />
+        </svg>
+      </button>
+
+      <button id="close" class="iconbtn" title="Close" aria-label="Close">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"
+             stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
+          <path d="M3.5 3.5l7 7M10.5 3.5l-7 7" />
+        </svg>
+      </button>
+    </div>
+
+    <div id="settings" class="settings hidden">
+      <div class="row"><span>Theme</span><div class="themes" id="themes"></div></div>
+
+      <div class="row">
+        <span>Background</span>
+        <button id="cBg" class="color-circle" type="button"
+                aria-label="Background color" aria-controls="color-palette"
+                aria-expanded="false"></button>
+      </div>
+
+      <div class="row">
+        <span>Text</span>
+        <button id="cText" class="color-circle" type="button"
+                aria-label="Text color" aria-controls="color-palette"
+                aria-expanded="false"></button>
+      </div>
+
+      <label class="row">
+        See-through
+        <input type="range" id="cOp" min="0.1" max="1" step="0.05" />
+      </label>
+
+      <label class="row">
+        Font
+        <select id="cFont">
+          <option>Segoe UI</option>
+          <option>Comic Sans MS</option>
+          <option>Segoe Script</option>
+          <option>Trebuchet MS</option>
+          <option>Georgia</option>
+          <option>Consolas</option>
+        </select>
+      </label>
+
+      <div id="color-palette" class="hidden" role="group" aria-label="Color palette">
+        <div id="color-area" tabindex="0" role="group"
+             aria-label="Color area. Use arrow keys to adjust saturation and brightness.">
+          <span id="color-marker" aria-hidden="true"></span>
+        </div>
+        <input id="color-hue" type="range" min="0" max="359" aria-label="Hue" />
+      </div>
+    </div>
+
+    <nav class="tabs" aria-label="Workspace">
+      <button id="todo-tab" aria-controls="checklist" aria-pressed="false">To-do</button>
+      <button id="notes-tab" aria-controls="note" aria-pressed="true">Notes</button>
+    </nav>
+
+    <section id="checklist" class="hidden" aria-labelledby="todo-tab">
+      <form id="task-form">
+        <input id="task-input" aria-label="New task"
+               placeholder="add a task…" autocomplete="off" />
+        <button id="add-task" type="submit">Add</button>
+      </form>
+      <ul id="task-list"></ul>
+    </section>
+
+    <div id="note" contenteditable="true" role="textbox" aria-label="Notes"
+         aria-multiline="true" spellcheck="false"
+         data-placeholder="write anything here..."></div>
+
+    <div class="toolbar">
+      <button class="fmt" data-cmd="bold" title="Bold (Ctrl+B)"><b>B</b></button>
+      <button class="fmt" data-cmd="italic" title="Italic (Ctrl+I)"><i>I</i></button>
+      <button class="fmt" data-cmd="underline" title="Underline (Ctrl+U)"><u>U</u></button>
+      <button class="fmt" data-cmd="strikeThrough" title="Strikethrough"><s>S</s></button>
+      <button class="fmt" data-cmd="insertUnorderedList" title="Bullet list" aria-label="Bullet list">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"
+             stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
+          <path d="M6 4h8M6 8h8M6 12h8" />
+          <circle cx="2.5" cy="4" r="1" fill="currentColor" />
+          <circle cx="2.5" cy="8" r="1" fill="currentColor" />
+          <circle cx="2.5" cy="12" r="1" fill="currentColor" />
+        </svg>
+      </button>
+    </div>
+
+    <div id="grip"></div>
+  </div>
+
+  <button id="tab" class="hidden" title="Click to open or drag to move" aria-label="Open Sticky">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="1.7" aria-hidden="true">
+      <title>ꕤ</title>
+      <path d="M12 12C6 12 3 9 3 6a3 3 0 0 1 3-3c3 0 6 3 6 9Z
+               M12 12c0-6 3-9 6-9a3 3 0 0 1 3 3c0 3-3 6-9 6Z
+               M12 12c6 0 9 3 9 6a3 3 0 0 1-3 3c-3 0-6-3-6-9Z
+               M12 12c0 6-3 9-6 9a3 3 0 0 1-3-3c0-3 3-6 9-6Z" />
+    </svg>
+  </button>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const card = $('card');
+    const note = $('note');
+    const settingsPanel = $('settings');
+
+    const themes = [
+      { name: 'Blush', bg: '#ffc8e6', text: '#5b2a4e' },
+      { name: 'Lilac', bg: '#e0c8ff', text: '#3d2a5b' },
+      { name: 'Sky', bg: '#c8e0ff', text: '#1f3a5b' },
+      { name: 'Mint', bg: '#c8ffe8', text: '#1f4d3a' },
+      { name: 'Peach', bg: '#ffe0c8', text: '#5b3a1f' },
+      { name: 'Galaxy', bg: '#1e1b2e', text: '#e8dcff' },
+    ];
+
+    const settings = {
+      color: '#ffc8e6',
+      opacity: 0.4,
+      text: '#5b2a4e',
+      font: 'Segoe UI',
+      ...JSON.parse(localStorage.getItem('settings') || '{}'),
+    };
+
+    function rgbChannels(hex) {
+      const color = parseInt(hex.slice(1), 16);
+      return [color >> 16, (color >> 8) & 255, color & 255];
+    }
+
+    function applySettings() {
+      const root = document.documentElement.style;
+      const [red, green, blue] = rgbChannels(settings.color);
+      root.setProperty('--bg', `rgba(${red}, ${green}, ${blue}, ${settings.opacity})`);
+      root.setProperty('--tab', `rgba(${red}, ${green}, ${blue}, 0.9)`);
+      root.setProperty('--solid', settings.color);
+      root.setProperty('--text', settings.text);
+      root.setProperty('--font', settings.font);
+
+      const brightness = red * 0.299 + green * 0.587 + blue * 0.114;
+      const cursorColor = brightness >= 128 ? 'black' : 'white';
+      const cursorSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="20">
+        <path d="M5.5 3.5h6m-3 0v13m-3 0h6" fill="none" stroke="${cursorColor}" stroke-width="1"/>
+      </svg>`;
+      root.setProperty(
+        '--text-cursor',
+        `url("data:image/svg+xml,${encodeURIComponent(cursorSvg)}") 8 10, text`
+      );
+
+      [...$('themes').children].forEach((dot, index) => {
+        const theme = themes[index];
+        dot.classList.toggle('active', theme.bg === settings.color && theme.text === settings.text);
+      });
+
+      localStorage.setItem('settings', JSON.stringify(settings));
+    }
+
+    themes.forEach((theme) => {
+      const dot = document.createElement('button');
+      dot.className = 'dot';
+      dot.title = theme.name;
+      dot.setAttribute('aria-label', theme.name);
+      dot.style.background = theme.bg;
+      dot.onclick = () => {
+        settings.color = theme.bg;
+        settings.text = theme.text;
+        applySettings();
+      };
+      $('themes').appendChild(dot);
+    });
+
+    const palette = $('color-palette');
+    const area = $('color-area');
+    const marker = $('color-marker');
+    const hue = $('color-hue');
+    let activeColor = null;
+    let heldPointer = null;
+    let saturation = 0;
+    let brightness = 1;
+
+    const clamp = (value) => Math.max(0, Math.min(1, value));
+
+    function readColor(hex) {
+      const [red, green, blue] = rgbChannels(hex).map((channel) => channel / 255);
+      const max = Math.max(red, green, blue);
+      const min = Math.min(red, green, blue);
+      const delta = max - min;
+
+      let sector = 0;
+      if (delta > 0) {
+        if (max === red) sector = (green - blue) / delta;
+        else if (max === green) sector = (blue - red) / delta + 2;
+        else sector = (red - green) / delta + 4;
+      }
+
+      hue.value = Math.round((sector * 60 + 360) % 360) % 360;
+      saturation = max === 0 ? 0 : delta / max;
+      brightness = max;
+    }
+
+    function drawMarker() {
+      area.style.setProperty('--palette-hue', hue.value);
+      marker.style.left = `${saturation * 100}%`;
+      marker.style.top = `${(1 - brightness) * 100}%`;
+    }
+
+    function saveColor() {
+      if (!activeColor) return;
+      const angle = Number(hue.value);
+
+      function channel(offset) {
+        const step = (offset + angle / 60) % 6;
+        const intensity = brightness * (
+          1 - saturation * Math.max(0, Math.min(step, 4 - step, 1))
+        );
+        return Math.round(intensity * 255).toString(16).padStart(2, '0');
+      }
+
+      settings[activeColor.key] = `#${channel(5)}${channel(3)}${channel(1)}`;
+      drawMarker();
+      applySettings();
+    }
+
+    function positionPalette() {
+      if (!activeColor) return;
+
+      const cardBounds = card.getBoundingClientRect();
+      const circle = activeColor.button.getBoundingClientRect();
+      const left = circle.right - cardBounds.left - card.clientLeft - palette.offsetWidth;
+      const below = circle.bottom - cardBounds.top - card.clientTop + 5;
+      const above = circle.top - cardBounds.top - card.clientTop - palette.offsetHeight - 5;
+
+      palette.style.left = `${Math.max(4, left)}px`;
+      palette.style.top = `${
+        below + palette.offsetHeight <= card.clientHeight
+          ? below
+          : Math.max(4, above)
+      }px`;
+    }
+
+    function closePalette() {
+      if (!activeColor) return;
+
+      if (heldPointer !== null && area.hasPointerCapture(heldPointer)) {
+        area.releasePointerCapture(heldPointer);
+      }
+      heldPointer = null;
+      activeColor.button.setAttribute('aria-expanded', 'false');
+      palette.classList.add('hidden');
+      activeColor = null;
+    }
+
+    function togglePalette(button, key) {
+      const sameCircle = activeColor?.button === button;
+      closePalette();
+      if (sameCircle) return;
+
+      activeColor = { button, key };
+      readColor(settings[key]);
+      drawMarker();
+      palette.classList.remove('hidden');
+      positionPalette();
+      button.setAttribute('aria-expanded', 'true');
+    }
+
+    $('cBg').onclick = () => togglePalette($('cBg'), 'color');
+    $('cText').onclick = () => togglePalette($('cText'), 'text');
+
+    function pickAtPointer(event) {
+      const bounds = area.getBoundingClientRect();
+      saturation = clamp((event.clientX - bounds.left) / bounds.width);
+      brightness = 1 - clamp((event.clientY - bounds.top) / bounds.height);
+      saveColor();
+    }
+
+    area.addEventListener('pointerdown', (event) => {
+      if (!activeColor || !event.isPrimary || event.button !== 0) return;
+      heldPointer = event.pointerId;
+      area.setPointerCapture(heldPointer);
+      pickAtPointer(event);
+    });
+
+    area.addEventListener('pointermove', (event) => {
+      if (event.pointerId === heldPointer && (event.buttons & 1)) {
+        pickAtPointer(event);
+      }
+    });
+
+    function endColorDrag(event) {
+      if (event.pointerId === heldPointer) heldPointer = null;
+    }
+
+    area.addEventListener('pointerup', endColorDrag);
+    area.addEventListener('pointercancel', endColorDrag);
+    area.addEventListener('lostpointercapture', endColorDrag);
+
+    area.addEventListener('keydown', (event) => {
+      switch (event.key) {
+        case 'ArrowLeft': saturation = clamp(saturation - 0.02); break;
+        case 'ArrowRight': saturation = clamp(saturation + 0.02); break;
+        case 'ArrowUp': brightness = clamp(brightness + 0.02); break;
+        case 'ArrowDown': brightness = clamp(brightness - 0.02); break;
+        default: return;
+      }
+
+      event.preventDefault();
+      saveColor();
+    });
+
+    hue.addEventListener('input', saveColor);
+
+    document.addEventListener('pointerdown', (event) => {
+      if (!activeColor) return;
+      if (activeColor.button.contains(event.target) || palette.contains(event.target)) return;
+      closePalette();
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape' || !activeColor) return;
+      const button = activeColor.button;
+      closePalette();
+      button.focus();
+    });
+
+    window.addEventListener('blur', closePalette);
+    window.addEventListener('resize', positionPalette);
+
+    $('cOp').value = settings.opacity;
+    $('cFont').value = settings.font;
+
+    $('cOp').oninput = (event) => {
+      settings.opacity = Number(event.target.value);
+      applySettings();
+    };
+
+    $('cFont').onchange = (event) => {
+      settings.font = event.target.value;
+      applySettings();
+    };
+
+    $('gear').onclick = () => {
+      closePalette();
+      settingsPanel.classList.toggle('hidden');
+    };
+
+    applySettings();
+
+    const title = $('title');
+    title.value = localStorage.getItem('title') || 'My Tasks';
+    title.oninput = () => localStorage.setItem('title', title.value);
+    title.onblur = () => {
+      if (!title.value.trim()) {
+        title.value = 'My Tasks';
+        localStorage.setItem('title', title.value);
+      }
+    };
+    title.onkeydown = (event) => {
+      if (event.key === 'Enter') title.blur();
+    };
+
+    function escapeHtml(text) {
+      return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    let noteHtml = localStorage.getItem('noteHtml');
+    if (noteHtml === null) {
+      let plain = localStorage.getItem('note');
+
+      if (plain === null) {
+        const oldTasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+        plain = oldTasks.map((task) => (task.done ? '✓ ' : '• ') + task.text).join('\n');
+      }
+
+      noteHtml = escapeHtml(plain).replace(/\n/g, '<br>');
+    }
+
+    note.innerHTML = noteHtml;
+
+    function saveNote() {
+      if (!note.textContent.trim() && !note.querySelector('li')) {
+        note.innerHTML = '';
+      }
+      localStorage.setItem('noteHtml', note.innerHTML);
+    }
+
+    note.addEventListener('input', saveNote);
+    note.addEventListener('paste', (event) => {
+      event.preventDefault();
+      document.execCommand('insertText', false, event.clipboardData.getData('text/plain'));
+    });
+    note.addEventListener('focus', () => card.classList.add('editing'));
+    note.addEventListener('blur', () => card.classList.remove('editing'));
+
+    const formatButtons = document.querySelectorAll('.fmt');
+
+    function updateFormatting() {
+      formatButtons.forEach((button) => {
+        button.classList.toggle('active', document.queryCommandState(button.dataset.cmd));
+      });
+    }
+
+    formatButtons.forEach((button) => {
+      button.onmousedown = (event) => event.preventDefault();
+      button.onclick = () => {
+        document.execCommand(button.dataset.cmd);
+        saveNote();
+        updateFormatting();
+      };
+    });
+
+    document.addEventListener('selectionchange', updateFormatting);
+
+    const checklist = $('checklist');
+    const taskList = $('task-list');
+    const taskInput = $('task-input');
+    const tasks = JSON.parse(localStorage.getItem('checklistTasks') || '[]');
+
+    function saveTasks() {
+      localStorage.setItem('checklistTasks', JSON.stringify(tasks));
+    }
+
+    function appendTask(task) {
+      const row = document.createElement('li');
+      row.className = 'task-row';
+
+      const label = document.createElement('label');
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.checked = task.done;
+      checkbox.onchange = () => {
+        task.done = checkbox.checked;
+        saveTasks();
+      };
+
+      const text = document.createElement('span');
+      text.textContent = task.text;
+      label.append(checkbox, text);
+
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'remove-task';
+      remove.textContent = '×';
+      remove.setAttribute('aria-label', 'Delete task: ' + task.text);
+      remove.onclick = () => {
+        tasks.splice(tasks.indexOf(task), 1);
+        saveTasks();
+        row.remove();
+        taskInput.focus();
+      };
+
+      row.append(label, remove);
+      taskList.appendChild(row);
+    }
+
+    tasks.forEach(appendTask);
+
+    $('task-form').onsubmit = (event) => {
+      event.preventDefault();
+      const text = taskInput.value.trim();
+      if (!text) return;
+
+      const task = { text, done: false };
+      tasks.push(task);
+      saveTasks();
+      appendTask(task);
+      taskInput.value = '';
+      taskInput.focus();
+    };
+
+    function showView(view) {
+      const showNotes = view === 'notes';
+      note.classList.toggle('hidden', !showNotes);
+      checklist.classList.toggle('hidden', showNotes);
+      card.classList.remove('editing');
+      $('notes-tab').setAttribute('aria-pressed', String(showNotes));
+      $('todo-tab').setAttribute('aria-pressed', String(!showNotes));
+      localStorage.setItem('stickyView', view);
+    }
+
+    $('notes-tab').onclick = () => showView('notes');
+    $('todo-tab').onclick = () => showView('todo');
+    showView(localStorage.getItem('stickyView') === 'todo' ? 'todo' : 'notes');
+
+    const grip = $('grip');
+    let resizeStart = null;
+
+    grip.onpointerdown = (event) => {
+      if (event.button !== 0) return;
+      grip.setPointerCapture(event.pointerId);
+      resizeStart = {
+        x: event.screenX,
+        y: event.screenY,
+        width: window.outerWidth,
+        height: window.outerHeight,
+      };
+    };
+
+    grip.onpointermove = (event) => {
+      if (!resizeStart) return;
+      window.api.resize(
+        resizeStart.width + event.screenX - resizeStart.x,
+        resizeStart.height + event.screenY - resizeStart.y
+      );
+    };
+
+    grip.onlostpointercapture = () => { resizeStart = null; };
+
+    const pin = $('pin');
+
+    function setPinned(pinned) {
+      window.api.setPinned(pinned);
+      pin.setAttribute('aria-pressed', String(pinned));
+      pin.title = pinned ? 'Unpin window' : 'Keep on top';
+    }
+
+    setPinned(localStorage.getItem('pinned') === 'true');
+
+    pin.onclick = () => {
+      const pinned = pin.getAttribute('aria-pressed') !== 'true';
+      setPinned(pinned);
+      localStorage.setItem('pinned', String(pinned));
+    };
+
+    const edgeTab = $('tab');
+    let drag = null;
+    let didDrag = false;
+
+    edgeTab.onpointerdown = (event) => {
+      if (event.button !== 0 || !event.isPrimary) return;
+
+      didDrag = false;
+      drag = { pointerId: event.pointerId, y: event.screenY };
+      edgeTab.setPointerCapture(event.pointerId);
+    };
+
+    edgeTab.onpointermove = (event) => {
+      if (drag?.pointerId !== event.pointerId || !(event.buttons & 1)) return;
+
+      const deltaY = event.screenY - drag.y;
+      if (!didDrag && Math.abs(deltaY) < 4) return;
+
+      didDrag = true;
+      window.api.moveTab(deltaY);
+      drag.y = event.screenY;
+    };
+
+    edgeTab.onlostpointercapture = () => { drag = null; };
+
+    $('min').onclick = () => {
+      closePalette();
+      window.api.collapse();
+    };
+
+    $('close').onclick = () => window.api.close();
+
+    window.api.onCollapsed((side) => {
+      card.classList.add('hidden');
+      edgeTab.className = side;
+    });
+
+    edgeTab.onclick = (event) => {
+      if (event.detail !== 0 && didDrag) return;
+
+      window.api.expand();
+      edgeTab.className = 'hidden';
+      card.classList.remove('hidden');
+    };
+  </script>
+</body>
+</html>

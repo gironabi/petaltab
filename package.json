@@ -1,0 +1,35 @@
+{
+  "name": "cute-todo",
+  "version": "1.0.0",
+  "description": "Customizable desktop notes and to-do list",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "make": "electron-forge make"
+  },
+  "keywords": [],
+  "author": "gironabi",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@electron-forge/cli": "^8.0.1",
+    "@electron-forge/maker-squirrel": "^8.0.1",
+    "electron": "^45.3.3"
+  },
+  "config": {
+    "forge": {
+      "makers": [
+        {
+          "name": "@electron-forge/maker-squirrel",
+          "config": {
+            "setupIcon": "flower.ico"
+          }
+        }
+      ],
+      "packagerConfig": {
+        "icon": "flower.ico"
+      }
+    }
+  },
+  "productName": "PetalTab"
+}
